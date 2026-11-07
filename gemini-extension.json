@@ -1,0 +1,14 @@
+{
+  "name": "reelspan",
+  "version": "0.1.0",
+  "description": "Publish videos, photos and text to 22 social networks from Gemini CLI.",
+  "mcpServers": {
+    "reelspan": {
+      "command": "npx",
+      "args": ["-y", "@reelspan/mcp"],
+      "env": {
+        "REELSPAN_API_KEY": "$REELSPAN_API_KEY"
+      }
+    }
+  }
+}

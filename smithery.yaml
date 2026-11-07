@@ -1,0 +1,23 @@
+# Smithery (smithery.ai): runs the stdio server with the user's API key.
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required: [apiKey]
+    properties:
+      apiKey:
+        type: string
+        description: Your Reelspan API key (dashboard → Developers → API keys)
+      readOnly:
+        type: boolean
+        default: false
+        description: Offer only tools that read (nothing gets posted or changed)
+  commandFunction: |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', '@reelspan/mcp'].concat(config.readOnly ? ['--read-only'] : []),
+      env: { REELSPAN_API_KEY: config.apiKey }
+    })
+  exampleConfig:
+    apiKey: rs_live_xxxxxxxxxxxxxxxx
+    readOnly: false

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.Reelspan/mcp",
+  "title": "Reelspan",
+  "description": "Publish videos, photos and text to TikTok, YouTube, Instagram, X, LinkedIn and 17 more networks.",
+  "websiteUrl": "https://reelspan.com/docs/mcp",
+  "repository": {
+    "url": "https://github.com/Reelspan/reelspan-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@reelspan/mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "REELSPAN_API_KEY",
+          "description": "Your Reelspan API key (dashboard → Developers → API keys)",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "REELSPAN_READ_ONLY",
+          "description": "Set to 1 to offer only tools that read",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.reelspan.com/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer followed by your Reelspan API key (or sign in with OAuth)",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "name": "@reelspan/mcp",
+  "version": "0.1.0",
+  "description": "Reelspan's MCP server over stdio: let Claude, Cursor and any MCP client publish videos, photos and text to TikTok, YouTube, Instagram, X, LinkedIn and 17 more networks.",
+  "mcpName": "io.github.Reelspan/mcp",
+  "license": "MIT",
+  "author": "Anjum Labs <support@reelspan.com>",
+  "homepage": "https://reelspan.com/docs/mcp",
+  "bugs": {
+    "url": "https://github.com/Reelspan/reelspan-mcp/issues",
+    "email": "support@reelspan.com"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "reelspan-mcp": "dist/cli.js"
+  },
+  "main": "./dist/proxy.js",
+  "types": "./dist/proxy.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/proxy.d.ts",
+      "default": "./dist/proxy.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "reelspan",
+    "mcp",
+    "model context protocol",
+    "mcp server",
+    "claude",
+    "cursor",
+    "social media",
+    "publishing",
+    "scheduling",
+    "tiktok",
+    "youtube",
+    "instagram",
+    "upload-post"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test test/proxy.test.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.9.0",
+    "zod": "^4.6.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Reelspan/reelspan-mcp.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
