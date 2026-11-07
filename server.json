@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
   "name": "io.github.Reelspan/mcp",
   "title": "Reelspan",
-  "description": "Publish videos, photos and text to TikTok, YouTube, Instagram, X, LinkedIn and 17 more networks.",
+  "description": "Publish videos, photos and text to TikTok, YouTube, Instagram, X, LinkedIn and more.",
   "websiteUrl": "https://reelspan.com/docs/mcp",
   "repository": {
     "url": "https://github.com/Reelspan/reelspan-mcp",

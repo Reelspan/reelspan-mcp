@@ -2,7 +2,7 @@
 
 [Reelspan](https://reelspan.com)'s MCP server over stdio. It lets Claude, Cursor, Windsurf, Zed, Cline, Gemini CLI and
 any other MCP client publish videos, photos and text to TikTok, YouTube, Instagram, Facebook, X, Threads, LinkedIn,
-Pinterest, Bluesky, Reddit and 12 more networks, schedule them, and read how they did.
+Pinterest, Bluesky, Reddit and more, schedule them, and read how they did.
 
 ```bash
 REELSPAN_API_KEY=rs_live_... npx -y @reelspan/mcp
