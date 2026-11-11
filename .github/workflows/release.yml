@@ -22,7 +22,14 @@ jobs:
         run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
       - run: npm ci
       - run: npm test
-      - run: npm publish --provenance --access public
+      # a version already on npm (the first one went up by hand) is left as it is, and the registry step still runs
+      - name: Publish to npm
+        run: |
+          if npm view "$(node -p "require('./package.json').name")@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+            echo "Already on npm"
+          else
+            npm publish --provenance --access public
+          fi
       - name: List in the MCP Registry
         run: |
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
