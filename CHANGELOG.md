@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- README: the tools as they are now. `generate_captions` is gone; `write_captions` reads an uploaded video, and
+  local files go up with `start_upload` and `complete_upload`.
+
 ## 0.1.0
 
 First release.
