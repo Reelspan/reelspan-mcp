@@ -107,7 +107,7 @@ Whatever the hosted server offers; today:
 | Analytics | `get_analytics`, `get_analytics_history`, `get_post_analytics` |
 | Profiles | `list_profiles`, `create_profile`, `delete_profile`, `get_connect_link`, `get_account_info` |
 | Media | `list_library`, `import_to_library` |
-| AI captions | `generate_captions`, `write_captions`, `rewrite_captions` |
+| AI captions | `write_captions` (from text, or an uploaded video or photos), `rewrite_captions` |
 | Teams | `create_approval_link`, `get_webhook`, `set_webhook` |
 
 Try: *"Post launch.mp4 from my Drive link to TikTok, YouTube Shorts and Instagram Reels for the acme profile tomorrow
