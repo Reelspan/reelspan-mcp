@@ -2,6 +2,10 @@
 // their schemas and the server instructions come from the hosted server at start, so this package never drifts
 // from it: a tool added there shows up here without a new release.
 
+import { createReadStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
+import { basename, extname } from 'node:path';
+import { Readable } from 'node:stream';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -18,7 +22,7 @@ import {
   type Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 export const DEFAULT_URL = 'https://api.reelspan.com/mcp';
 
 export type ProxyOptions = {
@@ -36,6 +40,32 @@ export type ProxyOptions = {
   timeoutMs?: number;
   /** Your own fetch, for proxies or tests. */
   fetch?: typeof fetch;
+};
+
+// The one tool that runs here instead of on the hosted server: only this local process can read the caller's files.
+// It does start_upload, the PUT of the file's bytes and complete_upload in one call.
+export const UPLOAD_FILE: Tool = {
+  name: 'upload_file',
+  title: 'Upload a local file',
+  description:
+    'Upload a file from this computer in one step and get its media_id: a video (mp4, mov, webm…), photo (jpg, png, webp…) or PDF document. ' +
+    'Use the media_id as video_media_id, photo_media_ids, document_media_id or thumbnail_media_id. Files up to 5 GB.',
+  inputSchema: {
+    type: 'object',
+    properties: { path: { type: 'string', description: 'Absolute path of the file' }, kind: { type: 'string', enum: ['video', 'photo', 'document'], description: 'Guessed from the extension when left out' } },
+    required: ['path'],
+  },
+  annotations: { destructiveHint: false, readOnlyHint: false, openWorldHint: false },
+};
+const KIND_OF: Record<string, 'video' | 'photo' | 'document'> = { '.mp4': 'video', '.mov': 'video', '.m4v': 'video', '.webm': 'video', '.mkv': 'video', '.jpg': 'photo', '.jpeg': 'photo', '.png': 'photo', '.gif': 'photo', '.webp': 'photo', '.heic': 'photo', '.pdf': 'document' };
+const text = (v: unknown, isError = false) => ({ content: [{ type: 'text' as const, text: typeof v === 'string' ? v : JSON.stringify(v, null, 2) }], isError });
+const parsed = (r: unknown) => {
+  const first = ((r as { content?: { type: string; text?: string }[] }).content)?.find((c) => c.type === 'text')?.text ?? '{}';
+  try {
+    return JSON.parse(first) as Record<string, unknown>;
+  } catch {
+    return { error: first };
+  }
 };
 
 /** Whether a tool passes the read-only, allow and deny filters. */
@@ -126,11 +156,17 @@ export class ReelspanMcpProxy {
     server.setRequestHandler(ListToolsRequestSchema, async (req) => {
       const r = await this.withUpstream((c) => c.listTools(req.params));
       for (const t of r.tools) this.known.set(t.name, t);
-      return { ...r, tools: r.tools.filter((t) => toolAllowed(t, this.opts)) };
+      // the local upload, on the first page, when the hosted server has the upload tools it is built on
+      const local = !req.params?.cursor && this.known.has('start_upload') && toolAllowed(UPLOAD_FILE, this.opts) ? [UPLOAD_FILE] : [];
+      return { ...r, tools: [...local, ...r.tools.filter((t) => toolAllowed(t, this.opts))] };
     });
 
     server.setRequestHandler(CallToolRequestSchema, async (req) => {
       const name = req.params.name;
+      if (name === UPLOAD_FILE.name) {
+        if (!toolAllowed(UPLOAD_FILE, this.opts)) return text('The tool "upload_file" is not available with the current settings (--read-only, --tools or --exclude-tools).', true);
+        return this.uploadFile(req.params.arguments ?? {});
+      }
       let tool = this.known.get(name);
       if (!tool) {
         const all = await this.withUpstream((c) => c.listTools());
@@ -152,6 +188,27 @@ export class ReelspanMcpProxy {
       server.setRequestHandler(ListResourceTemplatesRequestSchema, (req) => this.withUpstream((c) => c.listResourceTemplates(req.params)));
       server.setRequestHandler(ReadResourceRequestSchema, (req) => this.withUpstream((c) => c.readResource(req.params)));
     }
+  }
+
+  /** start_upload on the hosted server, the file's bytes straight to storage, then complete_upload. */
+  private async uploadFile(args: Record<string, unknown>) {
+    const path = typeof args.path === 'string' ? args.path : '';
+    const info = await stat(path).catch(() => null);
+    if (!info?.isFile()) return text(`No file at ${path || '(no path given)'}`, true);
+    const kind = (typeof args.kind === 'string' ? args.kind : undefined) ?? KIND_OF[extname(path).toLowerCase()];
+    if (!kind) return text('Say the kind (video, photo or document): the extension doesn’t tell.', true);
+    if (info.size > 5 * 1024 ** 3) return text('Files over 5 GB need start_upload with mode "multipart".', true);
+    const call = (name: string, a: Record<string, unknown>) => this.withUpstream((c) => c.callTool({ name, arguments: a }, undefined, { timeout: this.opts.timeoutMs }));
+    const started = await call('start_upload', { kind, size_bytes: info.size, filename: basename(path), mode: 'single' });
+    const s = parsed(started);
+    if (started.isError || typeof s.media_id !== 'string' || typeof s.upload_url !== 'string') return text(s, true);
+    const doFetch = this.opts.fetch ?? fetch;
+    const put = await doFetch(s.upload_url, { method: 'PUT', body: Readable.toWeb(createReadStream(path)) as ReadableStream, headers: { 'content-length': String(info.size) }, duplex: 'half' } as RequestInit);
+    if (!put.ok) {
+      await call('abort_upload', { media_id: s.media_id }).catch(() => undefined);
+      return text(`The upload to storage failed (HTTP ${put.status}).`, true);
+    }
+    return call('complete_upload', { media_id: s.media_id });
   }
 
   async close() {

@@ -101,12 +101,12 @@ Whatever the hosted server offers; today:
 
 | Area | Tools |
 |---|---|
-| Publish | `upload_video`, `upload_photos`, `upload_text`, `upload_document` |
-| After posting | `upload_status`, `upload_history`, `retry_failed` |
+| Publish | `upload_video`, `upload_photos`, `upload_text`, `upload_document`, `validate_post` |
+| After posting | `upload_status` (`wait_seconds` waits for every network), `upload_history`, `retry_failed` |
 | Schedule | `list_scheduled`, `edit_scheduled`, `cancel_scheduled`, `get_best_times` |
-| Analytics | `get_analytics`, `get_analytics_history`, `get_post_analytics` |
-| Profiles | `list_profiles`, `create_profile`, `delete_profile`, `get_connect_link`, `get_account_info` |
-| Media | `list_library`, `import_to_library` |
+| Analytics | `get_analytics`, `get_analytics_history`, `get_post_analytics` (numbers at 24h, 72h and 7d), `get_total_impressions` |
+| Profiles | `list_profiles`, `create_profile`, `delete_profile`, `get_connect_link`, `get_account_info`, `check_accounts` (are the sign-ins still good?) |
+| Media | `upload_file` (a local file in one step, runs in this package), `list_library`, `import_to_library` |
 | AI captions | `write_captions` (from text, or an uploaded video or photos), `rewrite_captions` |
 | Teams | `create_approval_link`, `get_webhook`, `set_webhook` |
 
