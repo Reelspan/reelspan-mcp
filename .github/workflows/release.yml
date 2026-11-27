@@ -1,37 +1,71 @@
-# On a published GitHub release (tag v1.2.3, matching package.json): publishes to npm with trusted publishing (no token
-# stored here; npmjs.com trusts this workflow) and then lists the version in the official MCP Registry, signing in
-# with this workflow's GitHub identity (the io.github.Reelspan namespace).
+# Releasing is one step: raise the version in package.json (with its CHANGELOG section) and push to main. When the
+# version has no GitHub release yet, this tests, publishes to npm with trusted publishing (no token is stored here;
+# npmjs.com trusts this workflow, and the package gets a provenance statement), lists it in the official MCP Registry
+# (signing in with this workflow's GitHub identity, the io.github.Reelspan namespace), then creates the release v1.2.3
+# with that version's CHANGELOG section as its notes. Other pushes stop after the check. Keep server.json's versions
+# equal to package.json's.
 name: Release
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
-  id-token: write
+concurrency: release
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      new: ${{ steps.v.outputs.new }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="$(node -p "require('./package.json').version")"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if gh release view "v$v" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "new=false" >> "$GITHUB_OUTPUT"; else echo "new=true" >> "$GITHUB_OUTPUT"; fi
   publish:
+    needs: check
+    if: needs.check.outputs.new == 'true'
     runs-on: ubuntu-latest
     environment: npm
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      - name: Tag matches package.json
-        run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
       - run: npm ci
       - run: npm test
-      # a version already on npm (the first one went up by hand) is left as it is, and the registry step still runs
+      - name: The code says the same version
+        run: grep -q "VERSION = '${{ needs.check.outputs.version }}'" src/proxy.ts
       - name: Publish to npm
         run: |
-          if npm view "$(node -p "require('./package.json').name")@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+          if npm view "$(node -p "require('./package.json').name")@${{ needs.check.outputs.version }}" version >/dev/null 2>&1; then
             echo "Already on npm"
           else
             npm publish --provenance --access public
           fi
+      - name: Versions match
+        run: |
+          test "$(node -p "require('./server.json').version")" = "${{ needs.check.outputs.version }}"
+          test "$(node -p "require('./server.json').packages[0].version")" = "${{ needs.check.outputs.version }}"
       - name: List in the MCP Registry
         run: |
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
           ./mcp-publisher login github-oidc
-          ./mcp-publisher publish
+          # the registry can take a minute to see a new npm version
+          for i in 1 2 3 4 5 6; do ./mcp-publisher publish && exit 0; sleep 20; done; exit 1
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ needs.check.outputs.version }}
+        run: |
+          awk -v v="$V" '$0=="## "v{f=1;next} /^## /{if(f)exit} f' CHANGELOG.md > notes.md
+          gh release create "v$V" --target "$GITHUB_SHA" --title "$V" --notes-file notes.md
